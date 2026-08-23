@@ -1,0 +1,15 @@
+# OpenTofu state — never commit, contains your infra details
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfplan
+ 
+# Your IP and settings — never commit
+terraform.tfvars
+ 
+# Python
+__pycache__/
+*.pyc
+.env
+venv/

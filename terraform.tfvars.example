@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars and fill in real values
+your_ip        = "YOUR.IP.HERE/32"   # run: curl ifconfig.me or curl https://ipv4.icanhazip.com
+aws_region     = "us-west-2"
+instance_count = 1                    # keep at 1 for free tier
+environment    = "dev"
+key_name       = "matchtracker-key"      # the key pair you created
