@@ -28,7 +28,8 @@ Client → Nginx (:80) → Flask/Gunicorn (127.0.0.1:5000) → in-memory store
 - **`Makefile`** — Linux/macOS command runner for the *deployed* instance (status, logs, restart, health checks)
 - **`terraform.tfvars.example`** — template for your deployment variables
 
-> The in-memory store (sessions, matches, leaderboard) is for demo purposes only — data is lost on restart. Swap in a real database (e.g. RDS PostgreSQL) for production use.
+> The in-memory store (sessions, matches, leaderboard) is for demo purposes only
+> Please use dedicated database(s) for prod, this is just an example
 
 ## API Reference
 
