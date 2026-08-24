@@ -51,8 +51,9 @@ Client → Nginx (:80) → Flask/Gunicorn (127.0.0.1:5000) → in-memory store
 
 - Python 3.10 and up
 - [OpenTofu](https://opentofu.org/) (or Terraform) — only needed for AWS deployment
-- An AWS account with credentials configured (for deployment)
-- Windows: PowerShell · Linux/macOS: `make`
+- An AWS account
+- Windows: PowerShell
+- Linux/macOS: `make` (used only in EC2 instances)
 
 ### Run locally
 
