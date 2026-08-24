@@ -128,9 +128,6 @@ output "health_urls" {
   ]
 }
 
-output "ssh_commands" {
-  value = [
-    for ip in aws_eip.matchtracker[*].public_ip :
-    "ssh -i ~/.ssh/matchtracker-key.pem ec2-user@${ip}"
-  ]
+output "instance_ips" {
+  value = aws_eip.matchtracker[*].public_ip
 }

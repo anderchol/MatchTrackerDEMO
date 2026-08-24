@@ -60,22 +60,15 @@ function Invoke-Check {
 }
 
 function Invoke-SSH {
-    $cmds = tofu output -json ssh_commands | ConvertFrom-Json
+   $ips = tofu output -json instance_public_ips | ConvertFrom-Json
 
-    if (-not $cmds) {
-        Write-Host "Stack not deployed." -ForegroundColor Red
-        return
+    for ($i = 0; $i -lt $ips.Count; $i++) {
+        Write-Host "$($i+1)) $($ips[$i])"
     }
 
-    for ($i = 0; $i -lt $cmds.Count; $i++) {
-        Write-Host "$($i + 1)) $($cmds[$i])"
-    }
+    $choice = [int](Read-Host "Instance number")
 
-    $choice = Read-Host "Instance number"
-
-    if (($choice -as [int]) -gt 0 -and $choice -le $cmds.Count) {
-        Invoke-Expression $cmds[$choice - 1]
-    }
+    ssh -i "$HOME\.ssh\matchtracker-key.pem" ec2-user@$($ips[$choice-1])
 }
 
 function Invoke-IP {
