@@ -60,7 +60,8 @@ upstream matchtracker_backend {
 }
 
 server {
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     location / {
         proxy_pass http://matchtracker_backend;
         proxy_set_header Host \$host;

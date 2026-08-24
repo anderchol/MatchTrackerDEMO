@@ -33,6 +33,21 @@ function Invoke-Deploy {
         tofu output
     }
 }
+function Invoke-CodeDeploy {
+    $ips = tofu output -json instance_public_ips | ConvertFrom-Json
+
+    if (-not $ips) {
+        Write-Host "Stack not deployed." -ForegroundColor Red
+        return
+    }
+
+    foreach ($ip in $ips) {
+        Write-Host "`nDeploying to $ip" -ForegroundColor Cyan
+        scp -i "$HOME\.ssh\matchtracker-key.pem" app/main.py ec2-user@${ip}:/tmp/main.py
+        ssh -i "$HOME\.ssh\matchtracker-key.pem" ec2-user@$ip `
+            "sudo cp /tmp/main.py /opt/matchtracker/main.py && sudo make -C /opt/matchtracker restart"
+    }
+}
 
 function Invoke-Destroy {
     Write-Host "Deleting AWS resources..." -ForegroundColor Red
@@ -111,6 +126,7 @@ switch ($Command.ToLower()) {
     "init"    { Invoke-Init }
     "plan"    { Invoke-Plan }
     "deploy"  { Invoke-Deploy }
+    "codedeploy" { Invoke-CodeDeploy }
     "destroy" { Invoke-Destroy }
     "check"   { Invoke-Check }
     "ssh"     { Invoke-SSH }

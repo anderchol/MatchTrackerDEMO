@@ -87,13 +87,15 @@ resource "aws_instance" "matchtracker" {
     key_name               = var.key_name
     vpc_security_group_ids = [aws_security_group.matchtracker.id]
 
-    user_data = templatefile("${path.module}/userdata.sh.tpl", {
-        flask_code = file("${path.module}/app/main.py")
-    })
+    user_data = file("${path.module}/userdata.sh.tpl")
 
     tags = {
-        Name = "matchtracker-${count.index}"
+        Name        = "matchtracker-${count.index}"
         Environment = var.environment
+    }
+
+    lifecycle {
+        ignore_changes = [user_data]
     }
 }
 
