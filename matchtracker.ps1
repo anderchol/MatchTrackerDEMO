@@ -1,4 +1,5 @@
 # matchtracker.ps1
+# WINDOWS ONLY
 param([Parameter(Position=0)][string]$Command = "help")
  
 function Invoke-Dev {

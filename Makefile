@@ -1,4 +1,5 @@
 # Makefile — place in project root, deploys to EC2 via user_data
+# NON-WINDOWS ONLY
 .PHONY: status logs restart nginx-status health
  
 status:
