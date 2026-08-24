@@ -95,3 +95,42 @@ resource "aws_launch_template" "matchtracker" {
         tags = { Name = "matchtracker-server", Environment = var.environment }
     }
 }
+
+# ---ASG (Auto Scaling Group)---
+resource "aws_autoscaling_group" "matchtracker" {
+    name             = "matchtracker-asg-${var.environment}"
+    desired_capacity = var.instance_count
+    min_size         = 1
+    max_size         = 3
+    availability_zones = ["${var.aws_region}a"]
+
+    launch_template {
+        id      = aws_launch_template.matchtracker.id
+        version = "$Latest"
+    }
+
+    health_check_type         = "EC2"
+    health_check_grace_period = 120
+
+    tag { 
+        key = "Name"
+        value = "matchtracker-server"
+        propagate_at_launch = true 
+    }
+
+}
+
+# ---Elastic IP---
+resource "aws_eip" "matchtracker" {
+    domain = "vpc"
+    tags   = { Name = "matchtracker-eip", Environment = var.environment }
+}
+
+
+
+output "elastic_ip"       { value = aws_eip.matchtracker.public_ip }
+output "app_url"          { value = "http://${aws_eip.matchtracker.public_ip}" }
+output "health_url"       { value = "http://${aws_eip.matchtracker.public_ip}/health" }
+output "ssh_command"      { value = "ssh -i ~/.ssh/matchtracker-key.pem ec2-user@${aws_eip.matchtracker.public_ip}" }
+output "hosts_file_entry" { value = "${aws_eip.matchtracker.public_ip}  matchtracker.local" }
+output "asg_name"         { value = aws_autoscaling_group.matchtracker.name }
