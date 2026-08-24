@@ -121,10 +121,33 @@ resource "aws_security_group" "matchtracker" {
 
 # }
 
+# ---EC2 Instance---
+resource "aws_instance" "matchtracker" {
+    count = var.instance_count
+    ami                    = data.aws_ami.amazon_linux.id
+    instance_type          = "t2.micro"
+    key_name               = var.key_name
+    vpc_security_group_ids = [aws_security_group.matchtracker.id]
+
+    user_data = templatefile("${path.module}/userdata.sh.tpl", {
+        flask_code = file("${path.module}/app/main.py")
+    })
+
+    tags = {
+        Name = "matchtracker-${count.index}"
+        Environment = var.environment
+    }
+}
+
 # ---Elastic IP---
 resource "aws_eip" "matchtracker" {
+    count = var.instance_count
+    instance = aws_instance.matchtracker[count.index].id
     domain = "vpc"
-    tags   = { Name = "matchtracker-eip", Environment = var.environment }
+    tags   = { 
+        Name = "matchtracker-eip-${count.index}"
+        Environment = var.environment 
+    }
 }
 
 
