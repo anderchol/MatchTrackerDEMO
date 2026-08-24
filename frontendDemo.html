@@ -146,23 +146,6 @@ async function refreshLeaderboard() {
   }
 }
 
-  const matches = [
-    { winners: ['alice', 'bob'], losers: ['carol', 'dave'] },
-    { winners: ['carol'], losers: ['dave'] },
-    { winners: ['alice'], losers: ['carol'] },
-    { winners: ['bob', 'dave'], losers: ['alice', 'carol'] }
-  ];
-  for (const m of matches) {
-    await fetch(baseUrl() + '/match/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(m)
-    });
-  }
-  refreshSessions();
-  refreshLeaderboard();
-  showRaw({ status: 'seed complete', players, matches_submitted: matches.length });
-}
 </script>
 
 </body>
