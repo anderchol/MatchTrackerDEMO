@@ -90,7 +90,6 @@ resource "aws_launch_template" "matchtracker" {
         set -e
         yum update -y
         yum install -y python3 python3-pip nginx make
-    
         mkdir -p /opt/matchtracker
     
         # Write Flask app
@@ -134,13 +133,15 @@ resource "aws_launch_template" "matchtracker" {
     
         # Nginx reverse proxy
         cat > /etc/nginx/conf.d/matchtracker.conf << NGINXEOF
-        upstream matchtracker_backend { server 127.0.0.1:5000; }
+        upstream matchtracker_backend { 
+            server 127.0.0.1:5000; 
+        }
         server {
             listen 80;
             location / {
                 proxy_pass http://matchtracker_backend;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
                 proxy_connect_timeout 5s;
                 proxy_read_timeout    30s;
             }
