@@ -58,6 +58,9 @@
   <tbody></tbody>
 </table>
 
+<h2>Seed Demo Data</h2>
+<p style="font-size:0.85rem;">Joins 4 players and submits a few matches</p>
+<button onclick="seedDemoData()">Seed Demo Data</button>
 
 <h2>Raw Response</h2>
 <pre id="rawOut">-</pre>
@@ -146,6 +149,32 @@ async function refreshLeaderboard() {
   }
 }
 
+async function seedDemoData() {
+  const players = ['player1', 'player2', 'player3', 'player4'];
+  for (const p of players) {
+    await fetch(baseUrl() + '/session/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: p })
+    });
+  }
+  const matches = [
+    { winners: ['player4'], losers: ['player2', 'player1', 'player3'] },
+    { winners: ['player4', 'player3'], losers: ['player1', 'player2'] },
+    { winners: ['player1'], losers: ['player3'] },
+    { winners: ['player1', 'player2'], losers: ['player4', 'player3'] }
+  ];
+  for (const m of matches) {
+    await fetch(baseUrl() + '/match/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(m)
+    });
+  }
+  refreshSessions();
+  refreshLeaderboard();
+  showRaw({ status: 'seed complete', players, matches_submitted: matches.length });
+}
 </script>
 
 </body>
