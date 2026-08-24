@@ -1,6 +1,7 @@
 # MatchTracker
 
 DEMO DESIGNED FOR WINDOWS OS DEV
+
 A tiny Flask API for tracking casual game/match sessions, recording results, and keeping a win leaderboard — deployable locally or to AWS EC2 with OpenTofu/Terraform.
 
 MatchTracker lets players join a session, submit match results (winners vs. losers), and see who's on top. It ships with a minimal in-memory backend, an Nginx + systemd production setup baked into EC2 user data, and helper scripts for both Windows (PowerShell) and Linux/macOS (Make).
