@@ -62,7 +62,7 @@ resource "aws_security_group" "matchtracker" {
         cidr_blocks = [var.your_ip]
     }
     ingress {
-        description = "Flask — localhost only, Nginx proxies here"
+        description = "Flask localhost only, Nginx proxies here"
         from_port   = 5000 
         to_port = 5000 
         protocol = "tcp"
