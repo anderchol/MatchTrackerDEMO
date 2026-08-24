@@ -77,48 +77,49 @@ resource "aws_security_group" "matchtracker" {
     tags = { Name = "matchtracker-sg", Environment = var.environment }
 }
 
-# ---EC2 INSTANCE BLUEPRINT---
-resource "aws_launch_template" "matchtracker" {
-    name_prefix            = "matchtracker-lt-"
-    image_id               = data.aws_ami.amazon_linux.id
-    instance_type          = "t2.micro"
-    vpc_security_group_ids = [aws_security_group.matchtracker.id]
-    key_name               = var.key_name
+# NON-FREE VERSION WITH ASG, WOULD NEED ALB TOO
+# # ---EC2 INSTANCE BLUEPRINT---
+# resource "aws_launch_template" "matchtracker" {
+#     name_prefix            = "matchtracker-lt-"
+#     image_id               = data.aws_ami.amazon_linux.id
+#     instance_type          = "t2.micro"
+#     vpc_security_group_ids = [aws_security_group.matchtracker.id]
+#     key_name               = var.key_name
 
-    user_data = base64encode(templatefile("${path.module}/userdata.sh.tpl", 
-                {
-                    flask_code = file("${path.module}/app/main.py")
-                }))
+#     user_data = base64encode(templatefile("${path.module}/userdata.sh.tpl", 
+#                 {
+#                     flask_code = file("${path.module}/app/main.py")
+#                 }))
     
-    tag_specifications {
-        resource_type = "instance"
-        tags = { Name = "matchtracker-server", Environment = var.environment }
-    }
-}
+#     tag_specifications {
+#         resource_type = "instance"
+#         tags = { Name = "matchtracker-server", Environment = var.environment }
+#     }
+# }
 
-# ---ASG (Auto Scaling Group)---
-resource "aws_autoscaling_group" "matchtracker" {
-    name             = "matchtracker-asg-${var.environment}"
-    desired_capacity = var.instance_count
-    min_size         = 1
-    max_size         = 3
-    availability_zones = ["${var.aws_region}a"]
+# # ---ASG (Auto Scaling Group)---
+# resource "aws_autoscaling_group" "matchtracker" {
+#     name             = "matchtracker-asg-${var.environment}"
+#     desired_capacity = var.instance_count
+#     min_size         = 1
+#     max_size         = 3
+#     availability_zones = ["${var.aws_region}a"]
 
-    launch_template {
-        id      = aws_launch_template.matchtracker.id
-        version = "$Latest"
-    }
+#     launch_template {
+#         id      = aws_launch_template.matchtracker.id
+#         version = "$Latest"
+#     }
 
-    health_check_type         = "EC2"
-    health_check_grace_period = 120
+#     health_check_type         = "EC2"
+#     health_check_grace_period = 120
 
-    tag { 
-        key = "Name"
-        value = "matchtracker-server"
-        propagate_at_launch = true 
-    }
+#     tag { 
+#         key = "Name"
+#         value = "matchtracker-server"
+#         propagate_at_launch = true 
+#     }
 
-}
+# }
 
 # ---Elastic IP---
 resource "aws_eip" "matchtracker" {

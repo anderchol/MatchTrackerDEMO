@@ -20,11 +20,11 @@ function Invoke-Init {
  
 function Invoke-Plan {
     Write-Host "Read this before deploying:" -ForegroundColor Yellow
-    tofu plan
+    tofu plan -var-file="terraform.tfvars" -out=tfplan
 }
  
 function Invoke-Deploy {
-    tofu apply -auto-approve
+    tofu apply -auto-approve "tfplan"
     if ($LASTEXITCODE -eq 0) { tofu output }
 }
  
