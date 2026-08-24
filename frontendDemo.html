@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MatchTracker Demo</title>
+<style>
+  body { font-family: monospace; max-width: 700px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-size: 1.3rem; }
+  h2 { font-size: 1rem; margin-top: 32px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  label { display: block; margin-top: 8px; font-size: 0.85rem; }
+  input { padding: 4px; margin-top: 2px; width: 220px; }
+  button { margin-top: 10px; padding: 6px 12px; cursor: pointer; }
+  pre { background: #f4f4f4; padding: 10px; overflow-x: auto; font-size: 0.85rem; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 220px; }
+  #status { font-size: 0.85rem; margin-top: 4px; }
+  table { border-collapse: collapse; margin-top: 8px; width: 100%; }
+  td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>MatchTracker Demo</h1>
+
+<label>Server URL</label>
+<input id="baseUrl" value="http://localhost:5000" style="width: 320px;">
+<button onclick="ping()">Check health</button>
+<div id="status"></div>
+
+<h2>Join / Leave Session</h2>
+<div class="row">
+  <div>
+    <label>Player ID</label>
+    <input id="playerId" value="alice">
+    <br>
+    <button onclick="join()">Join</button>
+    <button onclick="leave()">Leave</button>
+  </div>
+  <div>
+    <label>Active sessions</label>
+    <pre id="sessionsOut">-</pre>
+    <button onclick="refreshSessions()">Refresh</button>
+  </div>
+</div>
+
+<h2>Submit Match</h2>
+<label>Winners (comma-separated)</label>
+<input id="winners" value="alice,bob">
+<label>Losers (comma-separated)</label>
+<input id="losers" value="carol,dave">
+<br>
+<button onclick="submitMatch()">Submit Match</button>
+
+<h2>Leaderboard</h2>
+<button onclick="refreshLeaderboard()">Refresh</button>
+<table id="leaderboardTable">
+  <thead><tr><th>Rank</th><th>Player</th><th>Wins</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+
+<h2>Raw Response</h2>
+<pre id="rawOut">-</pre>
+
+<script>
+function baseUrl() {
+  return document.getElementById('baseUrl').value.replace(/\/$/, '');
+}
+
+function showRaw(data) {
+  document.getElementById('rawOut').textContent = JSON.stringify(data, null, 2);
+}
+
+async function call(path, opts) {
+  try {
+    const res = await fetch(baseUrl() + path, opts);
+    const data = await res.json();
+    showRaw(data);
+    return data;
+  } catch (err) {
+    showRaw({ error: String(err) });
+    return null;
+  }
+}
+
+async function ping() {
+  const data = await call('/health');
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = data ? `OK — uptime ${data.uptime_seconds}s, host ${data.hostname}` : 'Unreachable';
+}
+
+async function join() {
+  const player_id = document.getElementById('playerId').value.trim();
+  if (!player_id) return;
+  await call('/session/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player_id })
+  });
+  refreshSessions();
+}
+
+async function leave() {
+  const player_id = document.getElementById('playerId').value.trim();
+  if (!player_id) return;
+  await call('/session/leave', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player_id })
+  });
+  refreshSessions();
+}
+
+async function refreshSessions() {
+  const data = await call('/session/active');
+  document.getElementById('sessionsOut').textContent = data ? JSON.stringify(data.active_sessions) : '-';
+}
+
+function splitList(id) {
+  return document.getElementById(id).value
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+async function submitMatch() {
+  const winners = splitList('winners');
+  const losers = splitList('losers');
+  await call('/match/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ winners, losers })
+  });
+  refreshLeaderboard();
+}
+
+async function refreshLeaderboard() {
+  const data = await call('/leaderboard');
+  const tbody = document.querySelector('#leaderboardTable tbody');
+  tbody.innerHTML = '';
+  if (!data || !data.players) return;
+  for (const p of data.players) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.rank}</td><td>${p.player}</td><td>${p.wins}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+  const matches = [
+    { winners: ['alice', 'bob'], losers: ['carol', 'dave'] },
+    { winners: ['carol'], losers: ['dave'] },
+    { winners: ['alice'], losers: ['carol'] },
+    { winners: ['bob', 'dave'], losers: ['alice', 'carol'] }
+  ];
+  for (const m of matches) {
+    await fetch(baseUrl() + '/match/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(m)
+    });
+  }
+  refreshSessions();
+  refreshLeaderboard();
+  showRaw({ status: 'seed complete', players, matches_submitted: matches.length });
+}
+</script>
+
+</body>
+</html>
+
