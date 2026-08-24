@@ -1,7 +1,11 @@
 # matchtracker.ps1
 # WINDOWS ONLY
-param([Parameter(Position=0)][string]$Command = "help")
- 
+
+param(
+    [Parameter(Position=0)]
+    [string]$Command = "help"
+)
+
 function Invoke-Dev {
     Write-Host "Starting MatchTracker at http://localhost:5000" -ForegroundColor Cyan
     $env:FLASK_HOST  = "0.0.0.0"
@@ -9,70 +13,105 @@ function Invoke-Dev {
     $env:PORT        = "5000"
     python app/main.py
 }
- 
+
 function Invoke-Test {
     pytest tests/ -v
 }
- 
+
 function Invoke-Init {
     tofu init
 }
- 
+
 function Invoke-Plan {
-    Write-Host "Read this before deploying:" -ForegroundColor Yellow
+    Write-Host "Planning deployment..." -ForegroundColor Yellow
     tofu plan -var-file="terraform.tfvars" -out=tfplan
 }
- 
+
 function Invoke-Deploy {
-    tofu apply -auto-approve "tfplan"
-    if ($LASTEXITCODE -eq 0) { tofu output }
+    tofu apply -auto-approve tfplan
+    if ($LASTEXITCODE -eq 0) {
+        tofu output
+    }
 }
- 
+
 function Invoke-Destroy {
-    Write-Host "Deleting all AWS resources..." -ForegroundColor Red
+    Write-Host "Deleting AWS resources..." -ForegroundColor Red
     Start-Sleep -Seconds 3
     tofu destroy -auto-approve
 }
- 
+
 function Invoke-Check {
-    $url = tofu output -raw health_url 2>$null
-    if (-not $url) { Write-Host "Stack not deployed" -ForegroundColor Red; exit 1 }
-    Invoke-RestMethod -Uri $url | ConvertTo-Json -Depth 5
+    $urls = tofu output -json health_urls | ConvertFrom-Json
+
+    if (-not $urls) {
+        Write-Host "Stack not deployed." -ForegroundColor Red
+        return
+    }
+
+    foreach ($url in $urls) {
+        Write-Host "`nChecking $url" -ForegroundColor Cyan
+        try {
+            Invoke-RestMethod $url | ConvertTo-Json -Depth 5
+        }
+        catch {
+            Write-Host "Failed to connect." -ForegroundColor Red
+        }
+    }
 }
- 
+
 function Invoke-SSH {
-    $cmd = tofu output -raw ssh_command 2>$null
-    if (-not $cmd) { Write-Host "Stack not deployed" -ForegroundColor Red; exit 1 }
-    Write-Host "Connecting: $cmd" -ForegroundColor Cyan
-    Invoke-Expression $cmd
+    $cmds = tofu output -json ssh_commands | ConvertFrom-Json
+
+    if (-not $cmds) {
+        Write-Host "Stack not deployed." -ForegroundColor Red
+        return
+    }
+
+    for ($i = 0; $i -lt $cmds.Count; $i++) {
+        Write-Host "$($i + 1)) $($cmds[$i])"
+    }
+
+    $choice = Read-Host "Instance number"
+
+    if (($choice -as [int]) -gt 0 -and $choice -le $cmds.Count) {
+        Invoke-Expression $cmds[$choice - 1]
+    }
 }
- 
+
 function Invoke-IP {
-    $ip = Invoke-RestMethod -Uri "https://ifconfig.me"
+    $ip = Invoke-RestMethod https://ifconfig.me
+
+    Write-Host ""
     Write-Host "Paste into terraform.tfvars:" -ForegroundColor Yellow
-    Write-Host "  your_ip = `"$ip/32`"" -ForegroundColor Green
+    Write-Host "your_ip = `"$ip/32`"" -ForegroundColor Green
 }
- 
+
 function Invoke-DNS {
-    $entry = tofu output -raw hosts_file_entry 2>$null
-    if (-not $entry) { Write-Host "Stack not deployed" -ForegroundColor Red; exit 1 }
-    Write-Host "Add to C:WindowsSystem32driversetchosts:" -ForegroundColor Yellow
-    Write-Host "  $entry" -ForegroundColor Green
-    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole("Administrator")
-    if ($isAdmin) {
-        $confirm = Read-Host "Add automatically? (y/n)"
-        if ($confirm -eq "y") { Add-Content "C:WindowsSystem32driversetchosts" $entry }
-    } else { Write-Host "Rerun as Administrator to add automatically." -ForegroundColor Gray }
+    $ips = tofu output -json instance_public_ips | ConvertFrom-Json
+
+    if (-not $ips) {
+        Write-Host "Stack not deployed." -ForegroundColor Red
+        return
+    }
+
+    Write-Host "`nHosts entries:" -ForegroundColor Yellow
+
+    for ($i = 0; $i -lt $ips.Count; $i++) {
+        Write-Host "$($ips[$i]) matchtracker-$i.local" -ForegroundColor Green
+    }
 }
- 
+
 function Invoke-Status {
-    $asg = tofu output -raw asg_name 2>$null
-    aws autoscaling describe-auto-scaling-groups `
-        --auto-scaling-group-names $asg `
-        --query "AutoScalingGroups[0].Instances[*].{ID:InstanceId,State:LifecycleState}" `
+
+    $instances = aws ec2 describe-instances `
+        --filters "Name=tag:Environment,Values=dev" `
+                  "Name=instance-state-name,Values=running,pending,stopped" `
+        --query "Reservations[*].Instances[*].[InstanceId,State.Name,PublicIpAddress]" `
         --output table
+
+    $instances
 }
- 
+
 switch ($Command.ToLower()) {
     "dev"     { Invoke-Dev }
     "test"    { Invoke-Test }
@@ -85,5 +124,20 @@ switch ($Command.ToLower()) {
     "ip"      { Invoke-IP }
     "dns"     { Invoke-DNS }
     "status"  { Invoke-Status }
-    default   { Write-Host "Commands: dev test init plan deploy destroy check ssh ip dns status" }
+    default {
+        Write-Host ""
+        Write-Host "MatchTracker Commands" -ForegroundColor Cyan
+        Write-Host "---------------------"
+        Write-Host "dev      Run Flask locally"
+        Write-Host "test     Run tests"
+        Write-Host "init     Initialize Terraform/OpenTofu"
+        Write-Host "plan     Create deployment plan"
+        Write-Host "deploy   Apply deployment"
+        Write-Host "destroy  Destroy infrastructure"
+        Write-Host "check    Check all deployed servers"
+        Write-Host "ssh      SSH into a selected server"
+        Write-Host "ip       Show your public IP for terraform.tfvars"
+        Write-Host "dns      Display hosts file entries"
+        Write-Host "status   Show EC2 instance status"
+    }
 }
